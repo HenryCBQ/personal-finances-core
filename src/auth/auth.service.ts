@@ -1,4 +1,4 @@
-import { Injectable, BadRequestException, InternalServerErrorException, Logger } from '@nestjs/common';
+import { Injectable, BadRequestException, InternalServerErrorException, Logger, UnauthorizedException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { JwtService } from '@nestjs/jwt';
 import { Repository } from 'typeorm';
@@ -7,6 +7,8 @@ import { User } from '@moduleAuth/entities/user.entity';
 import { JwtPayload } from '@moduleAuth/interfaces/jwt-payload.interface';
 import { CreateUserPasswordDto } from '@moduleAuth/dtos/create-user-password.dto';
 import { CreateUserGoogleDto } from '@moduleAuth/dtos/create-user-google.dto';
+import { LoginUserDto } from './dtos/login-user.dto';
+import { IUserResponse } from './interfaces';
 
 @Injectable()
 export class AuthService {
@@ -18,7 +20,40 @@ export class AuthService {
         private readonly jwtService: JwtService
     ){}
 
-    async createUserPassword(createUserPasswordDto: CreateUserPasswordDto){
+    async loginUserPassword(loginUserDto: LoginUserDto): Promise<{ user: IUserResponse, token: string }>
+    {
+        const { email, password } = loginUserDto;
+        
+        const user = await this.userRepository.findOne({
+            where: { email: email.toLowerCase() },
+            select: ['id', 'email', 'name', 'password', 'isActive', 'role', 'pictureUrl', 'googleId']
+        })
+
+        if (!user) {
+            throw new UnauthorizedException('Invalid credentials (email)');
+        }
+
+        if(!user.password){
+            throw new UnauthorizedException('User registered with Google. Please use Google Sign-In or set a password');
+        }
+
+        if (!bcrypt.compareSync(password, user.password)) {
+            throw new UnauthorizedException('Invalid credentials (password)');
+        }
+
+        if (!user.isActive) {
+            throw new UnauthorizedException('User is not active');
+        }
+
+        const { password: _, ...userWithoutPassword } = user;
+
+        return {
+            user: userWithoutPassword,
+            token: this.getJwtToken({ id: user.id })
+        };
+    }
+
+    async registerUserPassword(createUserPasswordDto: CreateUserPasswordDto){
         try {
             const { password, ...userData } = createUserPasswordDto;
       
@@ -28,9 +63,11 @@ export class AuthService {
             });
       
             await this.userRepository.save(user);
+
+            const { password: _, ...userWithoutPassword } = user;
             
             return {
-              ...user,
+              ...userWithoutPassword,
               token: this.getJwtToken({ id: user.id })
             };
         } catch (error) {
@@ -86,9 +123,9 @@ export class AuthService {
 
     private handleDBErrors(error: any): never {
         if(error.code === '23505')
-          throw new BadRequestException(error.detail);
+          throw new BadRequestException(error.detail.includes('email') ? 'Email already exists' : error.detail);
     
-        this.logger.error(`Error in database: ${error.message}`); 
-        throw new InternalServerErrorException('Please check server logs');
+        this.logger.error(`Error message: ${error.message}`); 
+        throw new InternalServerErrorException('Unexpected error, please check server logs');
     }
 }

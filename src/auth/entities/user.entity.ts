@@ -1,9 +1,9 @@
-import { Column, Entity, PrimaryGeneratedColumn, CreateDateColumn, UpdateDateColumn } from "typeorm";
+import { Column, Entity, PrimaryGeneratedColumn, CreateDateColumn, UpdateDateColumn, BeforeInsert, BeforeUpdate } from "typeorm";
 import { UserRole } from "@moduleAuth/interfaces";
 
 @Entity('users')
 export class User{
-    @PrimaryGeneratedColumn()
+    @PrimaryGeneratedColumn('increment')
     id: number
 
     @Column({
@@ -19,7 +19,7 @@ export class User{
         nullable: true,
         unique: true
     })
-    googleId: string
+    googleId: string | null
 
     @Column({
         type: 'text',
@@ -29,9 +29,10 @@ export class User{
 
     @Column({
         type: 'text',
-        nullable: true
+        nullable: true,
+        select: false
     })
-    password: string
+    password?: string | null
 
     @Column({
         type: 'text'
@@ -40,28 +41,38 @@ export class User{
 
     @Column({
         name: 'picture_url',
-        type: 'text'
+        type: 'text',
+        nullable: true
     })
-    pictureUrl: string
+    pictureUrl: string | null
 
     @Column({
         name: 'is_active',
-        type: 'bool',
+        type: 'boolean',
         default: false
     })
-    isActive: boolean
+    isActive: boolean;
 
     @CreateDateColumn({
         name: 'created_at',
-        type: 'timestamp',
+        type: 'timestamptz',
         default: () => 'CURRENT_TIMESTAMP'
     })
     createdAt: Date;
 
     @UpdateDateColumn({ 
         name: 'updated_at',
-        type: 'timestamp',
-        default: () => 'CURRENT_TIMESTAMP'
-      })
-      updatedAt: Date;
+        type: 'timestamptz',
+        default: () => 'CURRENT_TIMESTAMP',
+        onUpdate: 'CURRENT_TIMESTAMP'
+    })
+    updatedAt: Date;
+
+    @BeforeInsert()
+    @BeforeUpdate()
+    lowercaseEmail(){
+        if (this.email) {
+            this.email = this.email.toLowerCase();
+        }
+    }
 }
