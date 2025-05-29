@@ -8,6 +8,7 @@ import { TransactionTypeModule } from './transaction-type/transaction-type.modul
 import { AuthModule } from './auth/auth.module';
 import { ItemModule } from './item/item.module';
 import { TransactionModule } from './transaction/transaction.module';
+import { EmailModule } from './email/email.module';
 
 @Module({
   imports: [
@@ -29,6 +30,7 @@ import { TransactionModule } from './transaction/transaction.module';
     AuthModule,
     ItemModule,
     TransactionModule,
+    EmailModule,
   ],
 })
 export class AppModule {}

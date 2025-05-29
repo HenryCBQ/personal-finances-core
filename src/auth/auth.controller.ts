@@ -1,4 +1,4 @@
-import { Body, Controller, Get, Post, Req, UnauthorizedException, UseGuards } from '@nestjs/common';
+import { Body, Controller, Get, Post, Req, UnauthorizedException, UseGuards, Param } from '@nestjs/common';
 import { AuthGuard } from '@nestjs/passport';
 import { AuthService } from './auth.service';
 import { User } from './entities/user.entity'; 
@@ -12,6 +12,11 @@ export class AuthController {
     @Post('register')
     async registerUserPassword(@Body() createUserPasswordDto: CreateUserPasswordDto){
         this.authService.registerUserPassword(createUserPasswordDto);
+    }
+
+    @Get('verify-account/:token')
+    async verifyAccount(@Param('token') token: string) {
+        return this.authService.verifyAccount(token);
     }
 
     @Post('login')

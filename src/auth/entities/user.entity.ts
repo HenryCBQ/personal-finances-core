@@ -53,6 +53,22 @@ export class User{
     })
     isActive: boolean;
 
+    @Column({
+        name: 'verification_token',
+        type: 'text',
+        nullable: true,
+        select: false,
+    })
+    verificationToken: string | null;
+
+    @Column({
+        name: 'verification_token_expires_at',
+        type: 'timestamptz',
+        nullable: true,
+        select: false,
+    })
+    verificationTokenExpiresAt: Date | null;
+
     @CreateDateColumn({
         name: 'created_at',
         type: 'timestamptz',

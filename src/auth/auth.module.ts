@@ -8,6 +8,7 @@ import { AuthController } from '@moduleAuth/auth.controller';
 import { JwtStrategy } from '@moduleAuth/strategies/jwt.strategy';
 import { GoogleStrategy } from './strategies/google.strategy';
 import { User } from '@moduleAuth/entities/user.entity';
+import { EmailModule } from '@moduleEmail/email.module';
 
 @Module({
   providers: [AuthService, JwtStrategy, GoogleStrategy],
@@ -27,7 +28,8 @@ import { User } from '@moduleAuth/entities/user.entity';
           }
         }
       }
-    })
+    }),
+    EmailModule,
   ],
   exports: [TypeOrmModule, JwtStrategy, PassportModule, JwtModule]
 })

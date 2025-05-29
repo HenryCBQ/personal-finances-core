@@ -19,6 +19,7 @@
     "noFallthroughCasesInSwitch": false,
     "paths": {
       "@moduleAuth/*": ["src/auth/*"],
+      "@moduleEmail/*": ["src/email/*"],
     }
   }
 }
