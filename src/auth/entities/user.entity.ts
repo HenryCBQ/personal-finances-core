@@ -30,7 +30,6 @@ export class User{
     @Column({
         type: 'text',
         nullable: true,
-        select: false
     })
     password?: string | null
 
@@ -65,7 +64,6 @@ export class User{
         name: 'verification_token_expires_at',
         type: 'timestamptz',
         nullable: true,
-        select: false,
     })
     verificationTokenExpiresAt: Date | null;
 

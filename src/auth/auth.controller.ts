@@ -32,22 +32,17 @@ export class AuthController {
     }
 
     @Get('verify-account/:token')
-    async verifyAccount(@Param('token') token: string, @Res({ passthrough: true }) res: Response) {
-        const result = await this.authService.verifyAccount(token);
-        if (result.jwtToken && result.user) {
-            this.setTokenCookie(res, result.jwtToken);
-        }
-        const { jwtToken, ...responsePayload } = result;
-        return responsePayload;
+    async verifyAccount(@Param('token') token: string) {
+        return await this.authService.verifyAccount(token);
     }
 
     @Post('login')
     @HttpCode(HttpStatus.OK)
     async loginUserPassword(@Body() loginUserDto: LoginUserDto, @Res({ passthrough: true }) res: Response){
-        const { user, token } = await this.authService.loginUserPassword(
+        const { user, jwtToken } = await this.authService.loginUserPassword(
             loginUserDto,
         );
-        this.setTokenCookie(res, token);
+        this.setTokenCookie(res, jwtToken);
         return { user };
     }
 
@@ -59,6 +54,7 @@ export class AuthController {
     @UseGuards(AuthGuard('google'))
     async googleAuthRedirect(@Req() req: Request, @Res({ passthrough: true }) res: Response) {
         const user = req.user as User; 
+        const frontendLoginUrl = new URL(this.configService.get<string>('FRONTEND_URL'));
 
         if (!user) {
             throw new UnauthorizedException("User object not found after Google authentication"); 
@@ -66,13 +62,11 @@ export class AuthController {
 
         const token = this.authService.getJwtToken({ id: user.id });
         this.setTokenCookie(res, token);
-        const { password: _, ...userWithoutPassword } = user;
-
-        return {
-            message: 'User authenticated with Google successfully',
-            user: userWithoutPassword,
-            token,
-        };
+        
+        const userResponse = this.authService.getUserResponse(user);
+        frontendLoginUrl.pathname = '/';
+        frontendLoginUrl.searchParams.set('user', JSON.stringify(userResponse));
+        return res.redirect(frontendLoginUrl.toString());
     }
 
     @Post('logout')
