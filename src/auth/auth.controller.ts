@@ -6,6 +6,8 @@ import { AuthService } from './auth.service';
 import { User } from './entities/user.entity'; 
 import { CreateUserPasswordDto } from './dtos/create-user-password.dto';
 import { LoginUserDto } from './dtos/login-user.dto';
+import { GetUser } from './decorators/get-user.decorator';
+import { ResetPasswordDto, ResetPasswordUrlDto } from './dtos/reset-password.dto';
 
 @Controller('auth')
 export class AuthController {
@@ -28,7 +30,7 @@ export class AuthController {
     @Post('register')
     @HttpCode(HttpStatus.OK)
     async registerUserPassword(@Body() createUserPasswordDto: CreateUserPasswordDto){
-        return this.authService.registerUserPassword(createUserPasswordDto);
+        return await this.authService.registerUserPassword(createUserPasswordDto);
     }
 
     @Get('verify-account/:token')
@@ -44,6 +46,18 @@ export class AuthController {
         );
         this.setTokenCookie(res, jwtToken);
         return { user };
+    }
+
+    @Post('reset-password')
+    @HttpCode(HttpStatus.OK)
+    async sendResetPasswordUrl(@Body() resetPasswordUrl: ResetPasswordUrlDto) {
+        return await this.authService.sendResetPasswordUrl(resetPasswordUrl);
+    }
+
+    @Post('reset-password/:token')
+    @HttpCode(HttpStatus.OK)
+    async resetPassword(@Param('token') token: string, @Body() resetPassword: ResetPasswordDto) {
+        return await this.authService.resetPassword(token, resetPassword);
     }
 
     @Get('google')
@@ -67,6 +81,12 @@ export class AuthController {
         frontendLoginUrl.pathname = '/';
         frontendLoginUrl.searchParams.set('user', JSON.stringify(userResponse));
         return res.redirect(frontendLoginUrl.toString());
+    }
+
+    @Get('profile')
+    @UseGuards(AuthGuard('jwt'))
+    checkAuthStatus( @GetUser() user: User) {
+        return { user: this.authService.getUserResponse(user) };
     }
 
     @Post('logout')

@@ -11,6 +11,7 @@ import { CreateUserGoogleDto } from '@moduleAuth/dtos/create-user-google.dto';
 import { LoginUserDto } from './dtos/login-user.dto';
 import { AuthUserResponse } from './interfaces';
 import { EmailService } from '@moduleEmail/email.service';
+import { ResetPasswordDto, ResetPasswordUrlDto } from './dtos/reset-password.dto';
 
 @Injectable()
 export class AuthService {
@@ -153,6 +154,69 @@ export class AuthService {
         const userSaved = await this.userRepository.save(user);
         const userResponse: AuthUserResponse = this.getUserResponse(userSaved);
         return userResponse;
+    }
+
+    async sendResetPasswordUrl(resetPasswordUrl: ResetPasswordUrlDto) {
+        const user = await this.userRepository.findOne({
+            where: { email: resetPasswordUrl.email.toLowerCase() }
+        });
+
+        if(!user){
+            throw new BadRequestException("El usuario no existe");
+        }
+
+        if(!user.isActive){
+            throw new BadRequestException('Usuario inactivo');
+        }
+        
+        const verificationToken = uuidv4();
+        const verificationTokenExpiresAt = new Date(
+            Date.now() + 24 * 60 * 60 * 1000,
+        );
+
+        user.verificationToken = verificationToken;
+        user.verificationTokenExpiresAt = verificationTokenExpiresAt;
+        await this.userRepository.save(user);
+
+        await this.emailService.sendResetPasswordUrl(
+            user.email,
+            user.name,
+            verificationToken,
+        );
+            
+        return {
+            message: 'Se ha enviado un correo electrónico con las instrucciones para cambiar su contraseña.',
+        };
+    }
+
+    async resetPassword(token: string, resetPassword: ResetPasswordDto) {
+        const user = await this.userRepository.findOne({
+            where: { verificationToken: token },
+        });
+
+        if (!user) {
+            throw new NotFoundException('Token no válido');
+        }
+
+        if(!user.isActive){
+            throw new BadRequestException('Usuario inactivo');
+        }
+
+        if(!user.verificationTokenExpiresAt || user.verificationTokenExpiresAt < new Date()){
+            user.verificationToken = null;
+            user.verificationTokenExpiresAt = null;
+            await this.userRepository.save(user);
+            throw new BadRequestException('El token expiró');
+        }
+
+        user.password = bcrypt.hashSync(resetPassword.password, 10)
+        user.verificationToken = null;
+        user.verificationTokenExpiresAt = null;
+        await this.userRepository.save(user);
+
+        return {
+            message: `${user.name}, tú contraseña fue cambiada exitosamente`
+        };
     }
 
     public getUserResponse(user: User){

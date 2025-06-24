@@ -6,7 +6,7 @@ import { Resend } from 'resend';
 export class EmailService {
     private readonly logger = new Logger(EmailService.name);
     private readonly resend: Resend;
-    private readonly frontendVerificationUrl: string;
+    private readonly frontendUrl: string;
 
     constructor(private readonly configService: ConfigService) {
     const apiKey = this.configService.get<string>('RESEND_API_KEY');
@@ -17,8 +17,8 @@ export class EmailService {
     }
 
     this.resend = new Resend(apiKey);
-    this.frontendVerificationUrl = this.configService.get<string>(
-        'FRONTEND_VERIFICATION_URL',
+    this.frontendUrl = this.configService.get<string>(
+        'FRONTEND_URL',
     );
   }
 
@@ -27,7 +27,7 @@ export class EmailService {
     name: string,
     verificationToken: string,
   ): Promise<void> {
-        const verificationLink = `${this.frontendVerificationUrl}/${verificationToken}`;
+        const verificationLink = `${this.frontendUrl}/auth/verify-account/${verificationToken}`;
         const subject = 'Confirma tú cuenta de PersonalFinances';
         const htmlBody = `
                 <h1>Bienvenido, <span class="math-inline">${name}</h1\>
@@ -53,6 +53,39 @@ export class EmailService {
             this.logger.log(`Verification email sent successfully to ${to}. Message ID: ${data?.id}`);
         } catch (error) {
             this.logger.error(`Failed to send verification email to ${to}`, error.message);
+        }
+    }
+
+    async sendResetPasswordUrl(
+        to: string,
+        name: string,
+        verificationToken: string,
+    ): Promise<void> {
+        const resetPasswordLink = `${this.frontendUrl}/auth/reset-password/${verificationToken}`;
+        const subject = 'Solicitud cambio de contraseña PersonalFinances';
+        const htmlBody = `
+                <h1>Hola, <span class="math-inline">${name}</h1\>
+                <p>Has solicitado cambiar tú contraseña. Da click en el siguiente enlace para cambiarla: 
+                    <a href="${resetPasswordLink}">Cambiar contraseña</a>
+                </p>
+                <p>La URL expira en 24 horas.</p>
+            `;
+    
+        try {
+            const { data, error } = await this.resend.emails.send({
+                from: 'Personal Finances App <onboarding@resend.dev>',
+                to: [to],
+                subject: subject,
+                html: htmlBody
+            });
+
+            if (error) {
+                this.logger.error(`Error sending reset password email to ${to}:`, error.message);
+            }
+
+            this.logger.log(`Reset password email sent successfully to ${to}. Message ID: ${data?.id}`);
+        } catch (error) {
+            this.logger.error(`Reset password email sent successfully to ${to}`, error.message);
         }
     }
 }
