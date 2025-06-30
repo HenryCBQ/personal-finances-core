@@ -1,24 +1,24 @@
 import { IsEmail, IsString, Matches, MaxLength, MinLength } from "class-validator";
 
 export class CreateUserPasswordDto {
-    @IsString( { message: 'Correo electrónico inválido' } )
-    @IsEmail( {}, { message: 'Correo electrónico inválido' } )
-    @MinLength(6, { message: 'Correo electrónico inválido' } )
-    @MaxLength(60, { message: 'Correo electrónico inválido' } )
+    @IsString( { message: 'Invalid email' } )
+    @IsEmail( {}, { message: 'Invalid email' } )
+    @MinLength(6, { message: 'Invalid email' } )
+    @MaxLength(60, { message: 'Invalid email' } )
     email: string;
 
     @IsString()
-    @MinLength(8, { message: 'La contraseña debe tener al menos 8 caracteres' } )
-    @MaxLength(30, { message: 'La contraseña no puede tener más de 30 caracteres' } )
+    @MinLength(8, { message: 'Password must be at least 8 characters long' } )
+    @MaxLength(30, { message: 'Password cannot be longer than 30 characters' } )
     @Matches(
         /(?:(?=.*\d)|(?=.*\W+))(?![.\n])(?=.*[A-Z])(?=.*[a-z]).*$/,{
-            message: 'Contraseña debe tener al menos una letra mayúscula, una minúscula y un número'
+            message: 'Password must have at least one uppercase letter, one lowercase letter, and one number'
         }
     )
     password: string;
 
     @IsString()
-    @MinLength(3, { message: 'El nombre debe tener al menos 3 caracteres' })
-    @MaxLength(60, { message: 'El nombre no puede tener más de 30 caracteres' }) 
+    @MinLength(3, { message: 'Name must be at least 3 characters long' })
+    @MaxLength(60, { message: 'Name cannot be longer than 30 characters' }) 
     name: string;
 }

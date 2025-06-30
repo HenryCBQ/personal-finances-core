@@ -9,18 +9,18 @@ export class EmailService {
     private readonly frontendUrl: string;
 
     constructor(private readonly configService: ConfigService) {
-    const apiKey = this.configService.get<string>('RESEND_API_KEY');
-    
-    if (!apiKey) {
-        this.logger.error('RESEND_API_KEY is not configured.');
-        throw new Error('RESEND_API_KEY is not configured.');
-    }
+        const apiKey = this.configService.get<string>('RESEND_API_KEY');
+        
+        if (!apiKey) {
+            this.logger.error('RESEND_API_KEY is not configured.');
+            throw new Error('RESEND_API_KEY is not configured.');
+        }
 
-    this.resend = new Resend(apiKey);
-    this.frontendUrl = this.configService.get<string>(
-        'FRONTEND_URL',
-    );
-  }
+        this.resend = new Resend(apiKey);
+        this.frontendUrl = this.configService.get<string>(
+            'FRONTEND_URL',
+        );
+    }
 
   async sendAccountVerificationEmail(
     to: string,
@@ -28,14 +28,14 @@ export class EmailService {
     verificationToken: string,
   ): Promise<void> {
         const verificationLink = `${this.frontendUrl}/auth/verify-account/${verificationToken}`;
-        const subject = 'Confirma tú cuenta de PersonalFinances';
+        const subject = 'Confirm your PersonalFinances account';
         const htmlBody = `
-                <h1>Bienvenido, <span class="math-inline">${name}</h1\>
-                <p>Gracias por registrarte. Da click en el siguiente enlace para confirma tú cuenta: 
-                    <a href="${verificationLink}">Confirmar</a>
+                <h1>Welcome, <span>${name}</span></h1>
+                <p>Thanks for signing up. Click the link below to confirm your account:
+                    <a href="${verificationLink}">Confirm</a>
                 </p>
-                <p>Si la cuenta no se confirma después de 24 horas el usuario tendrá que registrarse de nuevo.</p>
-                <p>Si no fuiste tú, no es necesario ninguna acción.</p>
+                <p>If the account is not confirmed after 24 hours, the user will have to register again.</p>
+                <p>If it wasn\'t you, no action is necessary.</p>
             `;
     
         try {
@@ -62,13 +62,13 @@ export class EmailService {
         verificationToken: string,
     ): Promise<void> {
         const resetPasswordLink = `${this.frontendUrl}/auth/reset-password/${verificationToken}`;
-        const subject = 'Solicitud cambio de contraseña PersonalFinances';
+        const subject = 'PersonalFinances password change request';
         const htmlBody = `
-                <h1>Hola, <span class="math-inline">${name}</h1\>
-                <p>Has solicitado cambiar tú contraseña. Da click en el siguiente enlace para cambiarla: 
-                    <a href="${resetPasswordLink}">Cambiar contraseña</a>
+                <h1>Hello, <span>${name}</span></h1>
+                <p>You have requested to change your password. Click on the following link to change it: 
+                    <a href="${resetPasswordLink}">Change password</a>
                 </p>
-                <p>La URL expira en 24 horas.</p>
+                <p>The URL expires in 24 hours.</p>
             `;
     
         try {
@@ -85,7 +85,7 @@ export class EmailService {
 
             this.logger.log(`Reset password email sent successfully to ${to}. Message ID: ${data?.id}`);
         } catch (error) {
-            this.logger.error(`Reset password email sent successfully to ${to}`, error.message);
+            this.logger.error(`Failed to send reset password email to ${to}`, error.message);
         }
     }
 }

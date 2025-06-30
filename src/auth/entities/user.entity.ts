@@ -67,6 +67,22 @@ export class User{
     })
     verificationTokenExpiresAt: Date | null;
 
+    @Column({
+        name: 'password_reset_token',
+        type: 'text',
+        nullable: true,
+        select: false,
+    })
+    passwordResetToken: string | null;
+
+    @Column({
+        name: 'password_reset_expires_at',
+        type: 'timestamptz',
+        nullable: true,
+        select: false,
+    })
+    passwordResetExpiresAt: Date | null;
+
     @CreateDateColumn({
         name: 'created_at',
         type: 'timestamptz',

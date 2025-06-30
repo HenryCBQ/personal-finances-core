@@ -1,4 +1,4 @@
-import { Injectable, BadRequestException, InternalServerErrorException, Logger, UnauthorizedException, NotFoundException } from '@nestjs/common';
+import { Injectable, BadRequestException, Logger, UnauthorizedException, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { JwtService } from '@nestjs/jwt';
 import { v4 as uuidv4 } from 'uuid';
@@ -34,19 +34,19 @@ export class AuthService {
         })
 
         if (!user) {
-            throw new UnauthorizedException('Esta cuenta no existe');
+            throw new UnauthorizedException('This account does not exist');
         }
 
         if(!user.password){
-            throw new UnauthorizedException('Usuario registrado con Google. Inicie sesión con su cuenta de Google');
+            throw new UnauthorizedException('User registered with Google. Please log in with your Google account');
         }
 
-        if (!bcrypt.compareSync(password, user.password)) {
-            throw new UnauthorizedException('Credenciales inválidas');
+        if (! await bcrypt.compare(password, user.password)) {
+            throw new UnauthorizedException('Invalid credentials');
         }
 
         if (!user.isActive) {
-            throw new UnauthorizedException('Usuario no activo, consulte las instrucciones de activación en su correo');
+            throw new UnauthorizedException('User not active, please check your email for activation instructions');
         }
 
         const userResponse = this.getUserResponse(user);
@@ -62,16 +62,16 @@ export class AuthService {
         });
 
         if (!user) {
-            throw new NotFoundException('Token no válido');
+            throw new NotFoundException('Invalid token');
         }
 
         if(user.isActive){
-            throw new BadRequestException('El usuario ya está activado');
+            throw new BadRequestException('User is already activated');
         }
 
         if(!user.verificationTokenExpiresAt || user.verificationTokenExpiresAt < new Date()){
             await this.userRepository.remove(user);
-            throw new BadRequestException('El token expiró. Regístrate de nuevo para obtener otro.');
+            throw new BadRequestException('The token has expired. Please register again to get a new one.');
         }
 
         user.isActive = true;
@@ -80,7 +80,7 @@ export class AuthService {
         await this.userRepository.save(user);
 
         return {
-            message: `${user.name}, tú cuenta fue activada exitosamente, ya puedes iniciar sesión.`
+            message: `${user.name}, your account was successfully activated, you can now log in.`
         };
     }
 
@@ -90,18 +90,15 @@ export class AuthService {
         });
 
         if(userExist){
-            throw new BadRequestException("Usuario ya está registado");
+            throw new BadRequestException("User is already registered");
         }
 
         const { password, ...userData } = createUserPasswordDto;
-        const verificationToken = uuidv4();
-        const verificationTokenExpiresAt = new Date(
-            Date.now() + 24 * 60 * 60 * 1000,
-        );
+        const { verificationToken, verificationTokenExpiresAt } = this._createTokenWithExpiration();
       
         const user = this.userRepository.create({
           ...userData,
-          password: bcrypt.hashSync(password, 10),
+          password: await bcrypt.hash(password, 10),
           verificationToken,
           verificationTokenExpiresAt
         });
@@ -115,7 +112,7 @@ export class AuthService {
         );
             
         return {
-            message: 'Registro exitoso. Revisa el correo electrónico para activar la cuenta',
+            message: 'Registration successful. Please check your email to activate your account',
         };
     }
 
@@ -162,20 +159,17 @@ export class AuthService {
         });
 
         if(!user){
-            throw new BadRequestException("El usuario no existe");
+            throw new BadRequestException("User does not exist");
         }
 
         if(!user.isActive){
-            throw new BadRequestException('Usuario inactivo');
+            throw new BadRequestException('User inactive');
         }
         
-        const verificationToken = uuidv4();
-        const verificationTokenExpiresAt = new Date(
-            Date.now() + 24 * 60 * 60 * 1000,
-        );
+        const { verificationToken, verificationTokenExpiresAt } = this._createTokenWithExpiration();
 
-        user.verificationToken = verificationToken;
-        user.verificationTokenExpiresAt = verificationTokenExpiresAt;
+        user.passwordResetToken = verificationToken;
+        user.passwordResetExpiresAt = verificationTokenExpiresAt;
         await this.userRepository.save(user);
 
         await this.emailService.sendResetPasswordUrl(
@@ -185,37 +179,37 @@ export class AuthService {
         );
             
         return {
-            message: 'Se ha enviado un correo electrónico con las instrucciones para cambiar su contraseña.',
+            message: 'An email has been sent with instructions to change your password.',
         };
     }
 
     async resetPassword(token: string, resetPassword: ResetPasswordDto) {
         const user = await this.userRepository.findOne({
-            where: { verificationToken: token },
+            where: { passwordResetToken: token },
         });
 
         if (!user) {
-            throw new NotFoundException('Token no válido');
+            throw new NotFoundException('Invalid token');
         }
 
         if(!user.isActive){
-            throw new BadRequestException('Usuario inactivo');
+            throw new BadRequestException('User inactive');
         }
 
-        if(!user.verificationTokenExpiresAt || user.verificationTokenExpiresAt < new Date()){
-            user.verificationToken = null;
-            user.verificationTokenExpiresAt = null;
+        if(!user.passwordResetExpiresAt || user.passwordResetExpiresAt < new Date()){
+            user.passwordResetToken = null;
+            user.passwordResetExpiresAt = null;
             await this.userRepository.save(user);
-            throw new BadRequestException('El token expiró');
+            throw new BadRequestException('The token has expired');
         }
 
         user.password = bcrypt.hashSync(resetPassword.password, 10)
-        user.verificationToken = null;
-        user.verificationTokenExpiresAt = null;
+        user.passwordResetToken = null;
+        user.passwordResetExpiresAt = null;
         await this.userRepository.save(user);
 
         return {
-            message: `${user.name}, tú contraseña fue cambiada exitosamente`
+            message: `${user.name}, your password was changed successfully`
         };
     }
 
@@ -234,5 +228,12 @@ export class AuthService {
     public getJwtToken(payload: JwtPayload){
         const token = this.jwtService.sign(payload);
         return token;
+    }
+
+    private _createTokenWithExpiration(hours: number = 24) {
+        return {
+            verificationToken: uuidv4(),
+            verificationTokenExpiresAt: new Date(Date.now() + hours * 60 * 60 * 1000),
+        };
     }
 }
